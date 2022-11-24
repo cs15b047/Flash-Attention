@@ -8,8 +8,8 @@
 using namespace std;
 
 float rand_float() {
-    // float r = (float)rand() / RAND_MAX;
-    return rand()%5;
+    float r = 0.1 * (float)rand() / RAND_MAX;
+    return 2 * r - 1;
 }
 
 void print_mat(float* O, int N, int dim) {
@@ -36,13 +36,6 @@ int main(int argc, char **argv) {
     generate(K, K + N * dim, rand_float);
     generate(V, V + N * dim, rand_float);
 
-    print_mat(Q, N, dim);
-    cout << endl;
-    print_mat(K, N, dim);
-    cout << endl;
-    print_mat(V, N, dim);
-    cout << endl;
-
     self_attention(Q, K, V, O, N, dim);
     cudaDeviceSynchronize();
 
@@ -55,6 +48,13 @@ int main(int argc, char **argv) {
     cout << "CPU output:" << endl;
     print_mat(O_cpu, N, dim);
     cout << endl;
+
+    // Calculate error
+    double error = 0;
+    for (int i = 0; i < N * dim; i++) {
+        error += fabs(O[i] - O_cpu[i]);
+    }
+    cout << "Error: " << error << endl;
 
     
 

@@ -6,13 +6,13 @@
 #SBATCH --time=0-00:02:00
 #SBATCH --output=GPU_Baseline.out --error=GPU_Baseline.err
 
-nvcc gpu_baseline.cu softmax.cu baseline_cpu.cpp driver.cpp -Xcompiler -O3 -Xcompiler -Wall -Xptxas -O3 -lcublas -std c++17 -o gpu_baseline
+nvcc gpu_baseline.cu softmax_cublas.cu baseline_cpu.cpp driver.cpp -g -G -lcublas -std c++17 -o gpu_baseline
 
-n=3
-dim=2 
+n=64
+dim=64 
+# -Xcompiler -O3 -Xcompiler -Wall -Xptxas -O3 
 
-
-./gpu_baseline $n $dim
+cuda-gdb ./gpu_baseline $n $dim
 
 
 
