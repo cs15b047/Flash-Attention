@@ -12,7 +12,7 @@ n=64
 dim=64 
 # -Xcompiler -O3 -Xcompiler -Wall -Xptxas -O3 
 
-cuda-gdb ./gpu_baseline $n $dim
+nvprof --export-profile exp.txt ./gpu_baseline $n $dim
 
 
 
