@@ -3,7 +3,7 @@
 
 using namespace std;
 
-void self_attention(const float *Q, const float *K, const float *V, float *O, int N, int dim) {
+void self_attention_cpu(const float *Q, const float *K, const float *V, float *O, int N, int dim) {
     float* QKt = new float[N * N];
     float* QKt_softmax = new float[N * N];
 
