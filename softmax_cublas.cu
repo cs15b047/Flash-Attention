@@ -45,27 +45,17 @@ __host__ void softmax_cublas(float *input, float *output, int N) {
     float *rowsums, *ones;
     cudaMallocManaged(&rowsums, N * sizeof(float));
     cudaMallocManaged(&ones, N * sizeof(float));
-    
-    
-    
-
-
 
     exp_kernel <<<num_blocks_exp, threads_per_block>>>(input, input, N);
     ones_kernel <<<num_blocks_inverse, threads_per_block>>>(ones, N);
 
     cublasHandle_t handle;
     cublasCreate(&handle);
-    
+
     
     cublasSgemv(handle, CUBLAS_OP_T, N, N, &alpha, input, N, ones, 1, &beta, rowsums, 1);
-    
-
     inverse_kernel<<<num_blocks_inverse, threads_per_block>>>(rowsums, rowsums, N);
-
     cublasSdgmm(handle, CUBLAS_SIDE_RIGHT, N, N, input, N, rowsums, 1, output, N);
-
-    cublasDestroy(handle);
-    
-   
+    cublasDestroy(handle); 
+  
 }

@@ -38,3 +38,5 @@ __host__ void self_attention(const float *Q, const float *K, const float *V, flo
                 V, dim, softmax_result, N, &beta, O, dim);
     cublasDestroy(handle);
 }
+
+
