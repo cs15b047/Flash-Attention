@@ -28,15 +28,13 @@ __host__ void self_attention(const float *Q, const float *K, const float *V, flo
     cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, 
                 N, N, dim, &alpha, 
                 K, dim, Q, dim, &beta, intermediate, N);
-    cublasDestroy(handle);
     
     softmax_cublas(intermediate, softmax_result, N);
-
-    cublasCreate(&handle);
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
                 dim, N, N, &alpha, 
                 V, dim, softmax_result, N, &beta, O, dim);
     cublasDestroy(handle);
+    cudaDeviceSynchronize();
 }
 
 
