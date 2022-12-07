@@ -14,13 +14,7 @@ void print_matrix(const float *matrix, int rows, int cols) {
     }
 }
 
-__host__ void self_attention(const float *Q, const float *K, const float *V, float *O, int N, int dim){
-    float *intermediate, *softmax_result;
-    cudaMallocManaged(&intermediate, N * N  * sizeof(float));
-    // cudaMemset(intermediate, 0, N * N  * sizeof(float));
-    cudaMallocManaged(&softmax_result, N * N * sizeof(float));
-    // cudaMemset(softmax_result, 0, N * N * sizeof(float));
-
+__host__ void self_attention(const float *Q, const float *K, const float *V, float *intermediate, float *softmax_result, float *O, int N, int dim){
     cublasHandle_t handle;
     cublasCreate(&handle);
     float alpha = 1.0f;

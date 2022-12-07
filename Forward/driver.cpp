@@ -25,11 +25,13 @@ int main(int argc, char **argv) {
     int N = stoi(argv[1]);
     int dim = stoi(argv[2]);
 
-    float *Q, *K, *V, *O, *O_cpu;
+    float *Q, *K, *V, *O, *O_cpu, *intermediate, *softmax_result;
     cudaMallocManaged((void **)&Q, sizeof(float) * N * dim);
     cudaMallocManaged((void **)&K, sizeof(float) * N * dim);
     cudaMallocManaged((void **)&V, sizeof(float) * N * dim);
     cudaMallocManaged((void **)&O, sizeof(float) * N * dim);
+    cudaMallocManaged((void **)&intermediate, N * N  * sizeof(float));
+    cudaMallocManaged((void **)&softmax_result, N * N * sizeof(float));
     O_cpu = new float[N * dim];
 
     generate(Q, Q + N * dim, rand_float);
@@ -41,7 +43,7 @@ int main(int argc, char **argv) {
 
     for(int i = 0; i <= num_iters; i++) {
         auto gpu_start = chrono::high_resolution_clock::now();
-        self_attention(Q, K, V, O, N, dim);
+        self_attention(Q, K, V, intermediate, softmax_result, O, N, dim);
         auto gpu_end = chrono::high_resolution_clock::now();
         auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
         if(i > 0) gpu_time_ms += gpu_time / 1000.0;
