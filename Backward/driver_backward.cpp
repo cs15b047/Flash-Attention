@@ -36,9 +36,9 @@ int main(int argc, char **argv) {
     cudaMallocManaged((void **)&dQ, sizeof(float) * N * dim);
     cudaMallocManaged((void **)&dK, sizeof(float) * N * dim);
     cudaMallocManaged((void **)&dV, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dS, sizeof(float) * N * dim);
+    cudaMallocManaged((void **)&dS, sizeof(float) * N * N);
     cudaMallocManaged((void **)&dO, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dP, sizeof(float) * N * dim);
+    cudaMallocManaged((void **)&dP, sizeof(float) * N * N);
 
     O_cpu = new float[N * dim];
 
@@ -48,12 +48,18 @@ int main(int argc, char **argv) {
     generate(dO, dO + N * dim, rand_float);
     generate(P, P + N * N, rand_float);
 
-    self_attention_backward_cpu(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
+    float cpu_time_ms = 0.0, gpu_time_ms = 0.0;
 
-    printf("dK: \n");
-    print_matrix(dK, N, dim);
-    printf("dQ: \n");
-    print_matrix(dQ, N, dim);
+    int num_iters = 50;
+
+    for(int i = 0; i < 50; i++) {
+        auto cpu_start = chrono::high_resolution_clock::now();
+        self_attention_backward_cpu(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
+        auto cpu_end = chrono::high_resolution_clock::now();
+        auto cpu_time = chrono::duration_cast<chrono::microseconds>(cpu_end - cpu_start).count();
+
+        if(i > 0) cpu_time_ms += cpu_time / 1000.0; // count time excluding 1st iteration
+    }
 
     cudaMemset(dQ, 0, sizeof(float) * N * dim);
     cudaMemset(dK, 0, sizeof(float) * N * dim);
@@ -62,34 +68,18 @@ int main(int argc, char **argv) {
     cudaMemset(dP, 0, sizeof(float) * N * N);
     
 
-    self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
-    // cudaDeviceSynchronize();
+    for(int i = 0; i < num_iters; i++) {
+        auto gpu_start = chrono::high_resolution_clock::now();
+        self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
+        auto gpu_end = chrono::high_resolution_clock::now();
+        auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
 
-    printf("dK: \n");
-    print_matrix(dK, N, dim);
-    printf("dQ: \n");
-    print_matrix(dQ, N, dim);
+        if(i > 0) gpu_time_ms += gpu_time / 1000.0; // count time excluding 1st iteration
+    }
 
-    // self_attention_cpu(Q, K, V, O_cpu, N, dim);
-
-    // cout << "GPU output:" << endl;
-    // print_mat(O, N, dim);
-    // cout << endl;
-
-    // cout << "CPU output:" << endl;
-    // print_mat(O_cpu, N, dim);
-    // cout << endl;
-
-    // // Calculate error
-    // double error = 0;
-    // for (int i = 0; i < N * dim; i++) {
-    //     error += fabs(O[i] - O_cpu[i]);
-    // }
-    // cout << "Error: " << error << endl;
-
-    
-
-    
+    float avg_cpu_time_ms = cpu_time_ms / (num_iters - 1), avg_gpu_time_ms = gpu_time_ms / (num_iters - 1);
+    cout << "CPU time: " << avg_cpu_time_ms << " ms" << endl;
+    cout << "GPU time: " << avg_gpu_time_ms << " ms" << endl;
 
     return 0;
 }
