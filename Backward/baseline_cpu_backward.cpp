@@ -31,12 +31,18 @@ void softmax_backward(const float* P, const float* dP, int N, float* dS) {
     }
 }
 
-void self_attention_backward_cpu(const float *Q, const float *K, const float *V, const float *dO, const float *P, float* dP, float* dQ, float* dV, float* dK, float* dS, int N, int dim){
-    matrix_mult(P, dO, dV, N, dim, N, true, false);
-    matrix_mult(dO, V, dP, N, N, dim, false, true);
-    softmax_backward(P, dP, N, dS);
-    matrix_mult(dS, K, dQ, N, dim, N, false, false);
-    matrix_mult(dS, Q, dK, N, dim, N, true, false);
+void self_attention_backward_cpu(const float *Q_, const float *K_, const float *V_, const float *dO_, const float *P_, float* dP_, float* dQ_, float* dV_, float* dK_, float* dS_, int N, int dim, int batch_size, int num_heads) {
+    for(int idx = 0; idx < batch_size * num_heads; idx++) {
+        // set arrays for this iteration
+        const float *Q = Q_ + idx * N * dim, *K = K_ + idx * N * dim, *V = V_ + idx * N * dim, *dO = dO_ + idx * N * dim, *P = P_ + idx * N * N;
+        float *dP = dP_ + idx * N * N, *dQ = dQ_ + idx * N * dim, *dV = dV_ + idx * N * dim, *dK = dK_ + idx * N * dim, *dS = dS_ + idx * N * N;
+
+        matrix_mult(P, dO, dV, N, dim, N, true, false);
+        matrix_mult(dO, V, dP, N, N, dim, false, true);
+        softmax_backward(P, dP, N, dS);
+        matrix_mult(dS, K, dQ, N, dim, N, false, false);
+        matrix_mult(dS, Q, dK, N, dim, N, true, false);
+    }
 }
 
 

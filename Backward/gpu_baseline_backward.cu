@@ -5,34 +5,37 @@
 
 
 __host__ void self_attention_backward(const float *Q, const float *K, const float *V, const float *dO, const float *P, 
-                                 float* dP, float* dQ, float* dV, float* dK, float* dS, int N, int dim) {
+                                 float* dP, float* dQ, float* dV, float* dK, float* dS, int N, int dim, int batch_size, int num_heads) {
     cublasHandle_t handle;
     cublasCreate(&handle);
     float alpha = 1.0f;
     float beta = 0.0f;
 
     // dV = P^T * dO
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T,
+    cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T,
                 dim, N, N, &alpha,
-                dO, dim, P, N, &beta, dV, dim);
-    
+                dO, dim, N*dim, P, N, N*N, &beta, dV, dim, N*dim,
+                batch_size * num_heads);
 
     // // dP = dO * V^T
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, 
+    cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, 
                 N, N, dim, &alpha, 
-                V, dim, dO, dim, &beta, dP, N);
+                V, dim, N*dim, dO, dim, N*dim, &beta, dP, N, N*N,
+                batch_size * num_heads);
     
     // dS = softmax backward
-    softmax_backward(P, dP, dS, N);
+    softmax_backward(P, dP, dS, N, batch_size, num_heads);
 
     // dQ = dS * K
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
+    cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
                 dim, N, N, &alpha, 
-                K, dim, dS, N, &beta, dQ, dim);
+                K, dim, N*dim, dS, N, N*N, &beta, dQ, dim, N*dim,
+                batch_size * num_heads);
 
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T,
+    cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T,
                 dim, N, N, &alpha,
-                Q, dim, dS, N, &beta, dK, dim);
+                Q, dim, N*dim, dS, N, N*N, &beta, dK, dim, N*dim,
+                batch_size * num_heads);
     
     cublasDestroy(handle);
 }
