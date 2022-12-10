@@ -25,52 +25,54 @@ void print_matrix(const float *matrix, int rows, int cols) {
 int main(int argc, char **argv) {
     int N = stoi(argv[1]);
     int dim = stoi(argv[2]);
+    int batch_size = stoi(argv[3]);
+    int num_heads = stoi(argv[4]);
 
     float *Q, *K, *V, *O, *P, *O_cpu;
     float *dQ, *dK, *dV, *dS, *dO, *dP;
-    cudaMallocManaged((void **)&Q, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&K, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&V, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&O, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&P, sizeof(float) * N * N);
-    cudaMallocManaged((void **)&dQ, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dK, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dV, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dS, sizeof(float) * N * N);
-    cudaMallocManaged((void **)&dO, sizeof(float) * N * dim);
-    cudaMallocManaged((void **)&dP, sizeof(float) * N * N);
+    cudaMallocManaged((void **)&Q, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&K, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&V, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&O, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&P, sizeof(float) * N * N * batch_size * num_heads);
+    cudaMallocManaged((void **)&dQ, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&dK, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&dV, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&dS, sizeof(float) * N * N * batch_size * num_heads);
+    cudaMallocManaged((void **)&dO, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMallocManaged((void **)&dP, sizeof(float) * N * N * batch_size * num_heads);
 
     O_cpu = new float[N * dim];
 
-    generate(Q, Q + N * dim, rand_float);
-    generate(K, K + N * dim, rand_float);
-    generate(V, V + N * dim, rand_float);
-    generate(dO, dO + N * dim, rand_float);
-    generate(P, P + N * N, rand_float);
+    generate(Q, Q + N * dim * batch_size * num_heads, rand_float);
+    generate(K, K + N * dim * batch_size * num_heads, rand_float);
+    generate(V, V + N * dim * batch_size * num_heads, rand_float);
+    generate(dO, dO + N * dim * batch_size * num_heads, rand_float);
+    generate(P, P + N * N * batch_size * num_heads, rand_float);
 
     float cpu_time_ms = 0.0, gpu_time_ms = 0.0;
 
-    int num_iters = 50;
+    int num_iters = 2;
 
-    for(int i = 0; i < 50; i++) {
-        auto cpu_start = chrono::high_resolution_clock::now();
-        self_attention_backward_cpu(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
-        auto cpu_end = chrono::high_resolution_clock::now();
-        auto cpu_time = chrono::duration_cast<chrono::microseconds>(cpu_end - cpu_start).count();
+    // for(int i = 0; i < num_iters; i++) {
+    //     auto cpu_start = chrono::high_resolution_clock::now();
+    //     self_attention_backward_cpu(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim, batch_size, num_heads);
+    //     auto cpu_end = chrono::high_resolution_clock::now();
+    //     auto cpu_time = chrono::duration_cast<chrono::microseconds>(cpu_end - cpu_start).count();
 
-        if(i > 0) cpu_time_ms += cpu_time / 1000.0; // count time excluding 1st iteration
-    }
+    //     if(i > 0) cpu_time_ms += cpu_time / 1000.0; // count time excluding 1st iteration
+    // }
 
-    cudaMemset(dQ, 0, sizeof(float) * N * dim);
-    cudaMemset(dK, 0, sizeof(float) * N * dim);
-    cudaMemset(dV, 0, sizeof(float) * N * dim);
-    cudaMemset(dS, 0, sizeof(float) * N * N);
-    cudaMemset(dP, 0, sizeof(float) * N * N);
+    cudaMemset(dQ, 0, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMemset(dK, 0, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMemset(dV, 0, sizeof(float) * N * dim * batch_size * num_heads);
+    cudaMemset(dS, 0, sizeof(float) * N * N * batch_size * num_heads);
+    cudaMemset(dP, 0, sizeof(float) * N * N * batch_size * num_heads);
     
 
     for(int i = 0; i < num_iters; i++) {
         auto gpu_start = chrono::high_resolution_clock::now();
-        self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim);
+        self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim, batch_size, num_heads);
         auto gpu_end = chrono::high_resolution_clock::now();
         auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
 
