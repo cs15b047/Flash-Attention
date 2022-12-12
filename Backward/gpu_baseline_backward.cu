@@ -24,7 +24,7 @@ __host__ void self_attention_backward(const float *Q, const float *K, const floa
                 batch_size * num_heads);
     
     // dS = softmax backward
-    softmax_backward1(P, dP, dS, rowsums, N, batch_size, num_heads);
+    softmax_backward(P, dP, dS, rowsums, N, batch_size, num_heads);
 
     // dQ = dS * K
     cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, 

@@ -40,6 +40,48 @@ __global__ void rowwise_sum(const float* dS_, float* rowsums, int N) {
 }
 
 
+__global__ void fused_softmax(const float *P_, const float* dP_, float* dS_, int N, int batch_size, int num_heads) {
+    int idx1 = blockIdx.x;
+    const float* P = P_ + idx1 * N * N, *dP = dP_ + idx1 * N * N;
+    float* dS = dS_ + idx1 * N * N;
+
+    extern __shared__ float shMem[];
+    float* shP = shMem;
+    float* shPdP = shP + N;
+    float* temp_sums = shPdP + N;
+
+    // Each thread computes sum of a row
+    for(int i = 0; i < N; i++) {
+        // load row to shMem
+        shP[threadIdx.x] = P[i * N + threadIdx.x];
+        shPdP[threadIdx.x] = shP[threadIdx.x] * dP[i * N + threadIdx.x];
+        __syncthreads();
+        temp_sums[threadIdx.x] = shPdP[threadIdx.x];
+        __syncthreads();
+
+        // reduce
+        for(int s = blockDim.x / 2; s > 0; s >>= 1) {
+            if(threadIdx.x < s) {
+                temp_sums[threadIdx.x] += temp_sums[threadIdx.x + s];
+            }
+            __syncthreads();
+        }
+        float rowsum = temp_sums[0];
+
+        // write to dS
+        dS[i * N + threadIdx.x] = shPdP[threadIdx.x] - shP[threadIdx.x] * rowsum;
+        __syncthreads();
+    }
+}
+
+__host__ void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
+    int threads = 1024;
+    int blocks = batch_size * num_heads;
+    int shared_memory_size = 3 * N * sizeof(float);
+
+    fused_softmax<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
+}
+
 __host__ void softmax_backward1(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     int threads = 1024;
     int blocks = batch_size * num_heads;
@@ -55,4 +97,9 @@ __host__ void softmax_backward1(const float *P, const float* dP, float* dS, floa
     // dS = dS - P .* rowsums
     subtraction<<<blocks, threads>>>(P, (const float*)rowsums, dS, N);
     cudaDeviceSynchronize();
+}
+
+__host__ void softmax_backward(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
+    // softmax_backward1(P, dP, dS, rowsums, N, batch_size, num_heads);
+    softmax_backward2(P, dP, dS, rowsums, N, batch_size, num_heads);
 }
