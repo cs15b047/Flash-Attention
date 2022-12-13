@@ -13,7 +13,7 @@ nvcc gpu_baseline_backward.cu softmax_backward.cu baseline_cpu_backward.cpp driv
 n=1024
 dim=64
 batch_size=64
-num_heads=1
+num_heads=8
 
 # nvprof --export-profile exp.txt ./gpu_baseline $n $dim
 echo "Executing GPU Baseline Backward"

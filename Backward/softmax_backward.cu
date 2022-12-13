@@ -1,6 +1,7 @@
 #include "self_attention_backward.cuh"
 #include "cublas_v2.h"
 #include <stdio.h>
+#include <cassert>
 
 __global__ void elementwise_product(const float *P_, const float *dP_, float *dS_, const int N) {
     int idx1 = blockIdx.x;
@@ -75,12 +76,66 @@ __global__ void fused_softmax(const float *P_, const float* dP_, float* dS_, int
     }
 }
 
+__device__ void warpReduce(volatile float* sdata) {
+    sdata[threadIdx.x] += sdata[threadIdx.x + 32];
+    sdata[threadIdx.x] += sdata[threadIdx.x + 16];
+    sdata[threadIdx.x] += sdata[threadIdx.x + 8];
+    sdata[threadIdx.x] += sdata[threadIdx.x + 4];
+    sdata[threadIdx.x] += sdata[threadIdx.x + 2];
+    sdata[threadIdx.x] += sdata[threadIdx.x + 1];
+}
+
+// Assume N = 1024 = blockDim.x
+__global__ void fused_softmax2(const float* P_, const float* dP_, float* dS_, int N, int batch_size, int num_heads) {
+    int idx1 = blockIdx.x;
+    const float* P = P_ + idx1 * N * N, *dP = dP_ + idx1 * N * N;
+    float* dS = dS_ + idx1 * N * N;
+
+    extern __shared__ float shMem[];
+    float* shP = shMem;
+    float* shPdP = shP + 2 * N;
+    float* temp_sums0 = shPdP + 2 * N;
+    float* temp_sums1 = temp_sums0 + blockDim.x/2;
+
+    // Each thread computes sum of a row
+    for(int i = 0; i < N; i+=2) {
+        // load 2 rows to shMem
+        for(int j = 0; j < 2; j++) {
+            shP[threadIdx.x + j * N] = P[(i + j) * N + threadIdx.x];
+            shPdP[threadIdx.x + j * N] = shP[threadIdx.x + j * N] * dP[(i + j) * N + threadIdx.x];
+            __syncthreads();
+        }
+        if(threadIdx.x < blockDim.x/2){
+            temp_sums0[threadIdx.x] = shPdP[threadIdx.x] + shPdP[threadIdx.x + blockDim.x/2];
+            temp_sums1[threadIdx.x] = shPdP[threadIdx.x + N] + shPdP[N + threadIdx.x + blockDim.x/2];
+        }
+        
+        __syncthreads();
+
+        // reduce 512 elements to 64 elements
+        for(int s = blockDim.x / 4; s > 0; s >>= 1) {
+            if(threadIdx.x < s) {
+                temp_sums0[threadIdx.x] += temp_sums0[threadIdx.x + s];
+                temp_sums1[threadIdx.x] += temp_sums1[threadIdx.x + s];
+            }
+            __syncthreads();
+        }
+
+        float rowsum0 = temp_sums0[0], rowsum1 = temp_sums1[0];
+
+        // write to dS
+        dS[i * N + threadIdx.x] = shPdP[threadIdx.x] - shP[threadIdx.x] * rowsum0;
+        dS[(i+1) * N + threadIdx.x] = shPdP[threadIdx.x + blockDim.x] - shP[threadIdx.x + blockDim.x] * rowsum1;
+        __syncthreads();
+    }
+}
+
 __host__ void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     int threads = 1024;
     int blocks = batch_size * num_heads;
-    int shared_memory_size = 3 * N * sizeof(float);
+    int shared_memory_size = 6 * N * sizeof(float);
 
-    fused_softmax<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
+    fused_softmax2<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
 }
 
 __host__ void softmax_backward1(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
@@ -100,6 +155,7 @@ __host__ void softmax_backward1(const float *P, const float* dP, float* dS, floa
 }
 
 __host__ void softmax_backward(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
+    assert(N == 1024);
     // softmax_backward1(P, dP, dS, rowsums, N, batch_size, num_heads);
     softmax_backward2(P, dP, dS, rowsums, N, batch_size, num_heads);
     cudaDeviceSynchronize();
