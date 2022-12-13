@@ -86,56 +86,13 @@ __device__ void warpReduce(volatile float* sdata) {
 }
 
 // Assume N = 1024 = blockDim.x
-__global__ void fused_softmax2(const float* P_, const float* dP_, float* dS_, int N, int batch_size, int num_heads) {
-    int idx1 = blockIdx.x;
-    const float* P = P_ + idx1 * N * N, *dP = dP_ + idx1 * N * N;
-    float* dS = dS_ + idx1 * N * N;
-
-    extern __shared__ float shMem[];
-    float* shP = shMem;
-    float* shPdP = shP + 2 * N;
-    float* temp_sums0 = shPdP + 2 * N;
-    float* temp_sums1 = temp_sums0 + blockDim.x/2;
-
-    // Each thread computes sum of a row
-    for(int i = 0; i < N; i+=2) {
-        // load 2 rows to shMem
-        for(int j = 0; j < 2; j++) {
-            shP[threadIdx.x + j * N] = P[(i + j) * N + threadIdx.x];
-            shPdP[threadIdx.x + j * N] = shP[threadIdx.x + j * N] * dP[(i + j) * N + threadIdx.x];
-            __syncthreads();
-        }
-        if(threadIdx.x < blockDim.x/2){
-            temp_sums0[threadIdx.x] = shPdP[threadIdx.x] + shPdP[threadIdx.x + blockDim.x/2];
-            temp_sums1[threadIdx.x] = shPdP[threadIdx.x + N] + shPdP[N + threadIdx.x + blockDim.x/2];
-        }
-        
-        __syncthreads();
-
-        // reduce 512 elements to 64 elements
-        for(int s = blockDim.x / 4; s > 0; s >>= 1) {
-            if(threadIdx.x < s) {
-                temp_sums0[threadIdx.x] += temp_sums0[threadIdx.x + s];
-                temp_sums1[threadIdx.x] += temp_sums1[threadIdx.x + s];
-            }
-            __syncthreads();
-        }
-
-        float rowsum0 = temp_sums0[0], rowsum1 = temp_sums1[0];
-
-        // write to dS
-        dS[i * N + threadIdx.x] = shPdP[threadIdx.x] - shP[threadIdx.x] * rowsum0;
-        dS[(i+1) * N + threadIdx.x] = shPdP[threadIdx.x + blockDim.x] - shP[threadIdx.x + blockDim.x] * rowsum1;
-        __syncthreads();
-    }
-}
 
 __host__ void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     int threads = 1024;
     int blocks = batch_size * num_heads;
     int shared_memory_size = 6 * N * sizeof(float);
 
-    fused_softmax2<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
+    fused_softmax<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
 }
 
 __host__ void softmax_backward1(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
