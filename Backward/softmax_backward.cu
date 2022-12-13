@@ -1,5 +1,6 @@
 #include "self_attention_backward.cuh"
 #include "cublas_v2.h"
+#include <stdio.h>
 
 __global__ void elementwise_product(const float *P_, const float *dP_, float *dS_, const int N) {
     int idx1 = blockIdx.x;
@@ -96,10 +97,10 @@ __host__ void softmax_backward1(const float *P, const float* dP, float* dS, floa
 
     // dS = dS - P .* rowsums
     subtraction<<<blocks, threads>>>(P, (const float*)rowsums, dS, N);
-    cudaDeviceSynchronize();
 }
 
 __host__ void softmax_backward(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     // softmax_backward1(P, dP, dS, rowsums, N, batch_size, num_heads);
     softmax_backward2(P, dP, dS, rowsums, N, batch_size, num_heads);
+    cudaDeviceSynchronize();
 }
