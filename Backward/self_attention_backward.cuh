@@ -7,4 +7,8 @@ void self_attention_backward(const float *Q, const float *K, const float *V, con
 
 void softmax_backward(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads);
 
+void softmax_backward1(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads);
+void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads);
+void softmax_backward3(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads);
+
 #endif // SELF_ATTN_BACKWARD_CUH
