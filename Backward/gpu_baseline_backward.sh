@@ -18,4 +18,4 @@ num_heads=8
 # nvprof --export-profile exp.txt ./gpu_baseline $n $dim
 echo "Executing GPU Baseline Backward"
 
-./gpu_baseline_backward $n $dim $batch_size $num_heads
+nvprof --export-profile exp.txt -f ./gpu_baseline_backward $n $dim $batch_size $num_heads

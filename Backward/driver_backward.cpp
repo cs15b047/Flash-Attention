@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
 
     float *Q, *K, *V, *O, *P, *O_cpu;
     float *dQ, *dK, *dV, *dS, *dO, *dP;
+    float *rowsums;
     cudaMallocManaged((void **)&Q, sizeof(float) * N * dim * batch_size * num_heads);
     cudaMallocManaged((void **)&K, sizeof(float) * N * dim * batch_size * num_heads);
     cudaMallocManaged((void **)&V, sizeof(float) * N * dim * batch_size * num_heads);
@@ -41,6 +42,7 @@ int main(int argc, char **argv) {
     cudaMallocManaged((void **)&dS, sizeof(float) * N * N * batch_size * num_heads);
     cudaMallocManaged((void **)&dO, sizeof(float) * N * dim * batch_size * num_heads);
     cudaMallocManaged((void **)&dP, sizeof(float) * N * N * batch_size * num_heads);
+    cudaMallocManaged((void **)&rowsums, sizeof(float) * N * batch_size * num_heads);
 
     O_cpu = new float[N * dim];
 
@@ -72,7 +74,7 @@ int main(int argc, char **argv) {
 
     for(int i = 0; i < num_iters; i++) {
         auto gpu_start = chrono::high_resolution_clock::now();
-        self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, N, dim, batch_size, num_heads);
+        self_attention_backward(Q, K, V, dO, P, dP, dQ, dV, dK, dS, rowsums, N, dim, batch_size, num_heads);
         auto gpu_end = chrono::high_resolution_clock::now();
         auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
 
@@ -82,6 +84,19 @@ int main(int argc, char **argv) {
     float avg_cpu_time_ms = cpu_time_ms / (num_iters - 1), avg_gpu_time_ms = gpu_time_ms / (num_iters - 1);
     cout << "CPU time: " << avg_cpu_time_ms << " ms" << endl;
     cout << "GPU time: " << avg_gpu_time_ms << " ms" << endl;
+
+    cudaFree(rowsums);
+    cudaFree(dQ);
+    cudaFree(dK);
+    cudaFree(dV);
+    cudaFree(dS);
+    cudaFree(dO);
+    cudaFree(dP);
+    cudaFree(Q);
+    cudaFree(K);
+    cudaFree(V);
+    cudaFree(O);
+    cudaFree(P);
 
     return 0;
 }
