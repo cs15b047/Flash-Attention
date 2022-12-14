@@ -146,15 +146,15 @@ __global__ void matmul_tiled_coalesced_one_to_many_kernel(const float* A, const 
     for (int a = aBegin, b = bBegin; a <= aEnd; a += aStep, b += bStep) {
         // Load tiles from global memory into shared memory; each
         // thread loads one element of the two tiles from A & B
-        As[ty * BLOCK_SIZE + tx] = A[a + K* ty + tx];
-        As[ty * BLOCK_SIZE + tx + BLOCK_SIZE/2] = A[a + K* ty + tx + BLOCK_SIZE/2];
-        As[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + tx] = A[a + K* (ty + BLOCK_SIZE/2) + tx];
-        As[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + (tx + BLOCK_SIZE/2)] = A[a + K* (ty + BLOCK_SIZE/2) + tx + BLOCK_SIZE/2];
+        As[ty * BLOCK_SIZE + tx] = __ldg(A[a + K* ty + tx]);
+        As[ty * BLOCK_SIZE + tx + BLOCK_SIZE/2] = __ldg(A[a + K* ty + tx + BLOCK_SIZE/2]);
+        As[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + tx] = __ldg(A[a + K* (ty + BLOCK_SIZE/2) + tx]);
+        As[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + (tx + BLOCK_SIZE/2)] = __ldg(A[a + K* (ty + BLOCK_SIZE/2) + tx + BLOCK_SIZE/2]);
 
-        Bs[ty * BLOCK_SIZE + tx] = B[b + N* ty + tx];
-        Bs[ty * BLOCK_SIZE + tx + BLOCK_SIZE/2] = B[b + N* ty + tx + BLOCK_SIZE/2];
-        Bs[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + tx] = B[b + N* (ty + BLOCK_SIZE/2) + tx];
-        Bs[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + (tx + BLOCK_SIZE/2)] = B[b + N * (ty + BLOCK_SIZE/2) + tx + BLOCK_SIZE/2];
+        Bs[ty * BLOCK_SIZE + tx] = __ldg(B[b + N* ty + tx]);
+        Bs[ty * BLOCK_SIZE + tx + BLOCK_SIZE/2] = __ldg(B[b + N* ty + tx + BLOCK_SIZE/2]);
+        Bs[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + tx] = __ldg(B[b + N* (ty + BLOCK_SIZE/2) + tx]);
+        Bs[(ty + BLOCK_SIZE/2) * BLOCK_SIZE + (tx + BLOCK_SIZE/2)] = __ldg(B[b + N * (ty + BLOCK_SIZE/2) + tx + BLOCK_SIZE/2]);
         // Synchronize to make sure the matrices are loaded
         __syncthreads();
         // Each thread in this block computes one element
