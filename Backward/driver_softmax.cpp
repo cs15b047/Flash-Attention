@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     int num_heads = stoi(argv[4]);
 
     float *P, *dP;
-    float *dS1, *dS2, *rowsums1, *rowsums2;
+    float *dS1, *dS2, *dS3, *rowsums1, *rowsums2, *rowsums3;
     cudaMallocManaged((void **)&P, sizeof(float) * N * N * batch_size * num_heads);
     cudaMallocManaged((void **)&dS1, sizeof(float) * N * N * batch_size * num_heads);
     cudaMallocManaged((void **)&dS2, sizeof(float) * N * N * batch_size * num_heads);
@@ -71,24 +71,46 @@ int main(int argc, char **argv) {
     generate(dP, dP + N * N * batch_size * num_heads, rand_float);
 
 
-    float gpu_time_ms = 0.0;
-    int num_iters = 2;
+    float gpu_time_ms_naive = 0.0, gpu_time_ms_optimized1 = 0.0, gpu_time_ms_optimized2 = 0.0;
+    int num_iters = 10;
 
     // softmax_grad_serial(P, dP, dS1, rowsums1, N, batch_size, num_heads);
 
+    // for(int i = 0; i < num_iters; i++) {
+    //     auto gpu_start = chrono::high_resolution_clock::now();
+    //     softmax_backward1(P, dP, dS1, rowsums1, N, batch_size, num_heads);
+    //     auto gpu_end = chrono::high_resolution_clock::now();
+    //     auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
+
+    //     if(i > 0) gpu_time_ms_naive += gpu_time / 1000.0; // count time excluding 1st iteration
+    // }
+
     for(int i = 0; i < num_iters; i++) {
         auto gpu_start = chrono::high_resolution_clock::now();
-        softmax_backward(P, dP, dS2, rowsums2, N, batch_size, num_heads);
+        softmax_backward2(P, dP, dS2, rowsums2, N, batch_size, num_heads);
         auto gpu_end = chrono::high_resolution_clock::now();
         auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
 
-        if(i > 0) gpu_time_ms += gpu_time / 1000.0; // count time excluding 1st iteration
+        if(i > 0) gpu_time_ms_optimized1 += gpu_time / 1000.0; // count time excluding 1st iteration
+    }
+
+    for(int i = 0; i < num_iters; i++) {
+        auto gpu_start = chrono::high_resolution_clock::now();
+        softmax_backward3(P, dP, dS2, rowsums2, N, batch_size, num_heads);
+        auto gpu_end = chrono::high_resolution_clock::now();
+        auto gpu_time = chrono::duration_cast<chrono::microseconds>(gpu_end - gpu_start).count();
+
+        if(i > 0) gpu_time_ms_optimized2 += gpu_time / 1000.0; // count time excluding 1st iteration
     }
 
     // calculate_error(dS1, dS2, rowsums1, rowsums2, N , batch_size, num_heads);
     
-    float avg_gpu_time_ms = gpu_time_ms / (num_iters - 1);
-    cout << "GPU time: " << avg_gpu_time_ms << " ms" << endl;
+    float avg_gpu_time_ms_naive = gpu_time_ms_naive / (num_iters - 1);
+    float avg_gpu_time_ms_optimized1 = gpu_time_ms_optimized1 / (num_iters - 1);
+    float avg_gpu_time_ms_optimized2 = gpu_time_ms_optimized2 / (num_iters - 1);
+    // cout << "GPU time (naive): " << avg_gpu_time_ms_naive << " ms" << endl;
+    cout << "GPU time (optimized-1): " << avg_gpu_time_ms_optimized1 << " ms" << endl;
+    cout << "GPU time (optimized-2): " << avg_gpu_time_ms_optimized2 << " ms" << endl;
 
     cudaFree(rowsums1);
     cudaFree(rowsums2);

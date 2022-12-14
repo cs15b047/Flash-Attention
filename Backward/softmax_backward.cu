@@ -121,12 +121,22 @@ __global__ void fused_softmax2(const float *P_, const float* dP_, float* dS_, in
 
 // Assume N = 1024 = blockDim.x
 
-__host__ void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
+__host__ void softmax_backward3(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     int threads = 1024;
     int blocks = batch_size * num_heads;
     int shared_memory_size = 6 * N * sizeof(float);
 
     fused_softmax2<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
+    cudaDeviceSynchronize();
+}
+
+__host__ void softmax_backward2(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
+    int threads = 1024;
+    int blocks = batch_size * num_heads;
+    int shared_memory_size = 6 * N * sizeof(float);
+
+    fused_softmax<<<blocks, threads, shared_memory_size>>>(P, dP, dS, N, batch_size, num_heads);
+    cudaDeviceSynchronize();
 }
 
 __host__ void softmax_backward1(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
@@ -143,11 +153,12 @@ __host__ void softmax_backward1(const float *P, const float* dP, float* dS, floa
 
     // dS = dS - P .* rowsums
     subtraction<<<blocks, threads>>>(P, (const float*)rowsums, dS, N);
+    cudaDeviceSynchronize();
 }
 
 __host__ void softmax_backward(const float *P, const float* dP, float* dS, float* rowsums, int N, int batch_size, int num_heads) {
     assert(N == 1024);
     // softmax_backward1(P, dP, dS, rowsums, N, batch_size, num_heads);
-    softmax_backward2(P, dP, dS, rowsums, N, batch_size, num_heads);
+    softmax_backward3(P, dP, dS, rowsums, N, batch_size, num_heads);
     cudaDeviceSynchronize();
 }
