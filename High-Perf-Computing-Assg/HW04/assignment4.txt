@@ -1,0 +1,11 @@
+Q1)
+Comparison with earlier scaling analysis:
+Earlier: Linear increase in time with n (Since time complexity of workload = O(n))
+Here: Cubic increase in time with n (Time complexity of Matmul = O(n^3))
+Also, times are much lower on GPU as compared to CPU due to high parallelism.
+
+Q2)
+Comparison with earlier scaling analysis:
+Times are much lower on GPU as compared to CPU due to high parallelism.
+Also, making a comparison without shared memory(plot submitted), the times are reduced by a huge margin
+Time increase linearly with n, but with a low slope, and times for medium-sized inputs still remain very lower due to faster shared memory.

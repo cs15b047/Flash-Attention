@@ -1,0 +1,15 @@
+Q1.
+a) Level 1: scalar-vector and vector-vector operations
+Level 2: matrix-vector operations
+Level 3: Matrix - matrix operations
+
+b) banded matrix vector multiply: Non-zero elements are present only in bands around the diagonal. Data to be read/computed upon is reduced depending on the band length
+symmetric matrix vector multiply: (Almost) Half of the elements are redundant, so need not be read/computed on.
+
+f) cuBLAS is approximately 7-8 times faster than the HW05 implementation
+
+Q2)
+c) ========= CUDA-MEMCHECK
+========= This tool is deprecated and will be removed in a future release of the CUDA toolkit
+========= Please use the compute-sanitizer tool as a drop-in replacement
+========= ERROR SUMMARY: 0 errors

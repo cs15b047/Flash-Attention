@@ -1,0 +1,3 @@
+Q2c) The runtime decreases as we increase number of threads from 1 to 12-13, and then stays almost constant. 
+The runtime decreases initially, as the convolution work gets divided among threads. But, when at higher number of threads (>15),
+the management of threads + time for assigning work to threads doesn't lead to any further improvments.

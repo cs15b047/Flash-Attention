@@ -1,0 +1,10 @@
+Q2) OpenMP, MPI for reduction:
+Both methods perform similarly after ~5 threads in each application, so used the best value for threads = 20
+
+Comparison:
+MPI performs better than OpenMP only after data size >= 2^26 elements (4 bytes each --> 256 MB) 
+(tested till 2^29 elements --> ~ 2 GB )
+For all smaller data sizes --> OpenMP performs better
+
+For smaller data size (KBs, few MBs) --> Use OpenMP
+For larger data size (10s or 100s of MBs, GBs) --> Use MPI

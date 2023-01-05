@@ -1,0 +1,8 @@
+Q1)
+
+Q2)
+c) plot attached for 32- block_dim
+d) Best performing block_dim = 32: Better arithmetic intensity. Can't go higher as Max threads = 1024 (32 x 32)
+e) Int vs Float vs Double Performance: Int performance is similar to float, Double performance is worse, as workload is memory-bound and double fields required double the total memory movement.
+f) HW04 best model for n = 2^14 --> 100sec, Current best model: 9.5 sec
+g) GPU result is way better than CPU result, due to the high amount of parallelism available on GPU: Serial implementation takes more than 10 min

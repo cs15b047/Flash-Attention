@@ -1,0 +1,7 @@
+*.out
+*.err
+*.sh
+*.h
+task1
+task2
+task2_pure_omp

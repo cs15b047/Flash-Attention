@@ -1,0 +1,6 @@
+*.out
+*.err
+*.cuh
+*.sh
+task1
+task2

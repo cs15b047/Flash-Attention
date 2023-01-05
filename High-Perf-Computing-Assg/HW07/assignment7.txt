@@ -1,0 +1,2 @@
+Q1
+d) Comparison of implementation: CUB better than Thrust, and Thrust better than HW05-Q1 implementation

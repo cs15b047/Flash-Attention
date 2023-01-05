@@ -1,0 +1,10 @@
+*.out
+*.err
+*.cuh
+*.sh
+*.h
+task1
+task1_thrust
+task1_cub
+task2
+task3

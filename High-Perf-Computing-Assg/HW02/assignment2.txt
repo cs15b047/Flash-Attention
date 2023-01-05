@@ -1,0 +1,10 @@
+Q3f) 
+part 1:
+mmul2 has the lowest time, followed by mmul1/mmul4, then by mmul3.
+Reason: Accessing sequential/random locations in inputs & output (A,B,C), which affects memory access latency due to cache hit/misses
+mmul2: A & C cached in inner loop, sequential access for B
+mmul1/mmul4: C cached in inner loop, sequential access for A, random(longer stride) access for A
+mmul3: B cached in inner loop, random access for A & C
+
+part2:
+mmul1 & mmul4: Performance of mmul1 and mmul4 is similar as both operate in similar way and vector has negligible overheads compared to arrays.

@@ -1,0 +1,22 @@
+Q3 b) 
+Bandwidth approxmns:
+
+Bandwidth = Data size / Time for transfer
+
+For highest data size: 2^25 floats --> 4 byte per float --> 128MB data for 1 transfer
+Total Data = 2 transfers --> 256MB = 0.25GB
+
+Time for transfer --> half of time measured (t0 + t1) since it is measured on 2 different machines [264.713 millisec = 0.264 sec]
+Time for transfer = 0.264/2 sec = 0.132 sec
+
+Approx bandwidth = 0.25GB/0.132sec ~ 1.88 GB/s = 15.1 Gbps
+
+
+Latency approxmns:
+
+Time for smallest data packet (8 bytes), although this includes MPI overhead also.
+
+Time for 2 transfers for both machines added = 5.678 millisec
+Time for 1 transfer = 5.678/4 = 1.4 millisec (around ~1-1.5 millisec)
+
+Latency ~ 1.5 ms

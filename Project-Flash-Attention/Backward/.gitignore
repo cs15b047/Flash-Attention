@@ -1,0 +1,5 @@
+gpu_baseline_backward
+softmax
+*.err
+*.out
+exp.txt

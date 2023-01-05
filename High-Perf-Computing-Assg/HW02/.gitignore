@@ -1,0 +1,8 @@
+.vscode/
+*.h
+*.out
+*.err
+*.sh
+task1
+task2
+task3
